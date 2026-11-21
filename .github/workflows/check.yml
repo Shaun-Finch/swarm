@@ -1,0 +1,12 @@
+name: domain check (one-off)
+on: { push: { branches: [dns-check] } }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for h in swarm-ai.cloud www.swarm-ai.cloud; do echo "== $h"; dig +short A $h; dig +short CNAME $h; done
+          echo "== http";  curl -sI --max-time 20 http://swarm-ai.cloud | head -5
+          echo "== https"; curl -sI --max-time 20 https://swarm-ai.cloud 2>&1 | head -5 || true
+          echo "== https -k"; curl -skI --max-time 20 https://swarm-ai.cloud | head -3
+          echo "== body"; curl -sL --max-time 20 http://swarm-ai.cloud | grep -o "<title>[^<]*</title>" || echo "no title"
