@@ -3,10 +3,15 @@ on: { push: { branches: [dns-check] } }
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - run: |
-          for h in swarm-ai.cloud www.swarm-ai.cloud; do echo "== $h"; dig +short A $h; dig +short CNAME $h; done
-          echo "== http";  curl -sI --max-time 20 http://swarm-ai.cloud | head -5
-          echo "== https"; curl -sI --max-time 20 https://swarm-ai.cloud 2>&1 | head -5 || true
-          echo "== https -k"; curl -skI --max-time 20 https://swarm-ai.cloud | head -3
-          echo "== body"; curl -sL --max-time 20 http://swarm-ai.cloud | grep -o "<title>[^<]*</title>" || echo "no title"
+          for i in $(seq 1 60); do
+            t=$(curl -sL --max-time 15 http://swarm-ai.cloud | grep -o "<title>[^<]*</title>" || true)
+            echo "try $i: $t"
+            case "$t" in *Swarm*) break;; esac
+            sleep 15
+          done
+          echo "== http";  curl -sI --max-time 20 http://swarm-ai.cloud | head -4
+          echo "== https"; curl -sI --max-time 20 https://swarm-ai.cloud 2>&1 | head -4 || echo "https not ready"
+          echo "== www";   curl -sIL --max-time 20 http://www.swarm-ai.cloud | grep -iE "^(HTTP|location)" || true
